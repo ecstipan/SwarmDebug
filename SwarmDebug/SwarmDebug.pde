@@ -81,7 +81,7 @@ public static final float raw_vol_max     = 7600.0;
 public static final float prt_ldr_min     = 0.0;
 public static final float prt_ldr_max     = 100.0;
 public static final float prt_temp_min     = 0.0;
-public static final float prt_temp_max     = 130.0;
+public static final float prt_temp_max     = 140.0;
 public static final float prt_cur_min     = 0.0;
 public static final float prt_cur_max     = 200.0;
 public static final float prt_rssi_min     = 0.0;
@@ -140,27 +140,27 @@ class eq1 implements ILine2DEquation{
 }
 class eq2 implements ILine2DEquation{
   public double computePoint(double x,int pos) {
-    return (double)TEMP;
+    return (double)map(TEMP, raw_temp_min, raw_temp_max, prt_temp_min, prt_temp_max);
   }    
 }
 class eq3 implements ILine2DEquation{
   public double computePoint(double x,int pos) {
-    return (double)RSSI;
+    return (double)map(RSSI, raw_rssi_min, raw_rssi_max, prt_rssi_min, prt_rssi_max);
   }    
 }
 class eq4 implements ILine2DEquation{
   public double computePoint(double x,int pos) {
-    return (double)VOL0;
+    return (double)map(VOL0, raw_vol_min, raw_vol_max, prt_vol_min, prt_vol_max);
   }    
 }
 class eq5 implements ILine2DEquation{
   public double computePoint(double x,int pos) {
-    return (double)VOL1;
+    return (double)map(VOL1, raw_vol_min, raw_vol_max, prt_vol_min, prt_vol_max);
   }    
 }
 class eq6 implements ILine2DEquation{
   public double computePoint(double x,int pos) {
-    return (double)CURR;
+    return (double)map(CURR, raw_cur_min, raw_cur_max, prt_cur_min, prt_cur_max);
   }    
 }
 
@@ -193,8 +193,8 @@ void setupGraphs() {
   g1.setYAxisMax(prt_ldr_max);
   g1.setYAxisMin(prt_ldr_min);
   g1.addTrace(r1);
-  g1.position.y = 50;
-  g1.position.x = 100;
+  g1.position.y = 40;
+  g1.position.x = 870;
   g1.setYAxisTickSpacing(20);
   g1.setXAxisMax(5f);
   g1.setNoBorder();
@@ -210,8 +210,8 @@ void setupGraphs() {
   g2.setYAxisMax(prt_temp_max);
   g2.setYAxisMin(prt_temp_min);
   g2.addTrace(r2);
-  g2.position.y = 50;
-  g2.position.x = 100;
+  g2.position.y = 160;
+  g2.position.x = 870;
   g2.setYAxisTickSpacing(20);
   g2.setXAxisMax(5f);
   g2.setNoBorder();
@@ -227,8 +227,8 @@ void setupGraphs() {
   g3.setYAxisMax(prt_rssi_max);
   g3.setYAxisMin(prt_rssi_min);
   g3.addTrace(r3);
-  g3.position.y = 50;
-  g3.position.x = 100;
+  g3.position.y = 300;
+  g3.position.x = 870;
   g3.setYAxisTickSpacing(20);
   g3.setXAxisMax(5f);
   g3.setNoBorder();
@@ -244,9 +244,9 @@ void setupGraphs() {
   g4.setYAxisMax(prt_cur_max);
   g4.setYAxisMin(prt_cur_min);
   g4.addTrace(r6);
-  g4.position.y = 50;
-  g4.position.x = 100;
-  g4.setYAxisTickSpacing(20);
+  g4.position.y = 430;
+  g4.position.x = 870;
+  g4.setYAxisTickSpacing(50);
   g4.setXAxisMax(5f);
   g4.setNoBorder();
   g4.setBackground(gb4);
@@ -262,9 +262,9 @@ void setupGraphs() {
   g5.setYAxisMin(prt_vol_min);
   g5.addTrace(r5);
   g5.addTrace(r4);
-  g5.position.y = 50;
-  g5.position.x = 100;
-  g5.setYAxisTickSpacing(20);
+  g5.position.y = 550;
+  g5.position.x = 870;
+  g5.setYAxisTickSpacing(0.2);
   g5.setXAxisMax(5f);
   g5.setNoBorder();
   g5.setBackground(gb5);
@@ -557,7 +557,7 @@ public void setup() {
  Global Output Renderer
  =========================================*/
 public void draw() {
-  background(5);
+  background(0);
   fill(20);
   rect(10, 860, 585, 30);
   fill(40);
