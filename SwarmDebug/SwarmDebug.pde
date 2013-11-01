@@ -24,7 +24,7 @@ import java.util.concurrent.TimeUnit;
 /*=========================================
  DEMO MODE
  =========================================*/
-public static final boolean demoMode = false;
+public static boolean demoMode = true;
 
 /*=========================================
  Global Defines
@@ -62,7 +62,7 @@ Textfield sendDialog;
 
 //Scheduling
 ScheduledExecutorService worker = Executors.newSingleThreadScheduledExecutor();
-public static final String DATE_FORMAT_NOW = "yyyy-MM-dd HH:mm:ss";
+public static String DATE_FORMAT_NOW = "yyyy-MM-dd HH:mm:ss";
 
 /*=========================================
  Defines for Data
@@ -399,6 +399,7 @@ void connectSwarm(int serialDevice) {
       currentSerialDevice = Serial.list()[serialDevice];
       serialPortNumber = serialDevice;
       foundSerial = true;
+      demoMode = false;
     } 
     catch (Exception e) {
       //leave blank
@@ -479,7 +480,7 @@ void parseSerialFrame() {
 }
 
 void readSerial() {
-  if (comPort.available() != 0) {
+  if ( foundSerial && comPort != null && comPort.available() != 0) {
     previousByte = (byte)lastByte;
     lastByte = (byte)inByte;
     inByte = (byte)comPort.read();
@@ -580,10 +581,12 @@ public void setupGraphics() {
  UI Functions
  =========================================*/
  public void sendSerial() {
-    _sendSerial(sendDialog.getText());
+   if (sendDialog.getText().equals("demo")) demoMode = !demoMode;
+    else _sendSerial(sendDialog.getText());
 }
 public void serialToSend(String theText) {
-  _sendSerial(theText);
+  if (theText.equals("demo")) demoMode = !demoMode;
+  else _sendSerial(theText);
 }
 
 void disconnectUSB() {
