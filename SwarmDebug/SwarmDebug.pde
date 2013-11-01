@@ -7,6 +7,7 @@
 import controlP5.*;
 import org.gwoptics.graphics.*;
 import org.gwoptics.graphics.graph2D.*;
+import org.gwoptics.graphics.graph2D.Graph2D;
 import org.gwoptics.graphics.graph2D.LabelPos;
 import org.gwoptics.graphics.graph2D.traces.Line2DTrace;
 import org.gwoptics.graphics.graph2D.traces.ILine2DEquation;
@@ -21,18 +22,16 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /*=========================================
+ DEMO MODE
+ =========================================*/
+public static final boolean demoMode = false;
+
+/*=========================================
  Global Defines
  =========================================*/
- int baudrate = 9600;
+//Serial
+int baudrate = 9600;
 Serial comPort;
-ControlP5 cp5;
-RollingLine2DTrace r1, r2, r3, r4, r5, r6;
-Graph2D g1, g2, g3, g4, g5;
-GridBackground gb1, gb2, gb3, gb4, gb5;
-Textarea consoleTextarea;
-DropdownList portChooser;
-ScheduledExecutorService worker = Executors.newSingleThreadScheduledExecutor();
-public static final String DATE_FORMAT_NOW = "yyyy-MM-dd HH:mm:ss";
 int serialPortNumber = -1;
 boolean foundSerial = false;
 boolean autoConnectSerial = true;
@@ -40,29 +39,44 @@ String currentSerialDevice = "";
 byte previousByte = 0;
 byte lastByte = 0;
 byte inByte = 0;
-int bytesToRead = 33;
+int bytesToRead = 35;
 byte[] serialBuffer = new byte[bytesToRead];
 int placeInFrame = 0;
 int droppedPackets = 0;
 long packetNumber = 1;
 boolean inPacket = false;
+long serialBtyesRec = 0;
+
+//GraphingS
+RollingLine2DTrace r1, r2, r3, r4, r5, r6;
+Graph2D g1, g2, g3, g4, g5;
+GridBackground gb1, gb2, gb3, gb4, gb5;
+
+//UI
+ControlP5 cp5;
+Textarea consoleTextarea;
+DropdownList portChooser;
 CheckBox checkbox;
 PFont f;
-long serialBtyesRec = 0;
 Textfield sendDialog;
+
+//Scheduling
+ScheduledExecutorService worker = Executors.newSingleThreadScheduledExecutor();
+public static final String DATE_FORMAT_NOW = "yyyy-MM-dd HH:mm:ss";
 
 /*=========================================
  Defines for Data
  =========================================*/
-int IR0, IR1, IR3, IR4, IR5, IR6, IR7;
-int MEMS0, MEMS1, MEMS2, MEMS3;
-int LDR;
-boolean ES0, ES1, ES2, ES3;
-int IMU_X, IMU_Y, IMU_Z;
-int TEMP, CURR, RSSI, VOL0, VOL1;
-boolean BS0, BS1, BS2, BS3;
-boolean DP0, DP1, DP2, DP3;
+int IR0, IR1, IR2, IR3, IR4, IR5, IR6, IR7;//
+int MEMS0, MEMS1, MEMS2, MEMS3;            //
+int LDR;                                   //graphed
+boolean ES0, ES1, ES2, ES3;                //
+int IMU_X, IMU_Y, IMU_Z;                   //
+int TEMP, CURR, RSSI, VOL0, VOL1;          //graphed
+boolean BS0, BS1, BS2, BS3;                //
+boolean DP0, DP1, DP2, DP3;                //
 
+//define input ranges
 public static final float raw_ir_min      = 1200.0;
 public static final float raw_ir_max      = 4500.0;
 public static final float raw_mems_min    = 0.0;
@@ -78,6 +92,7 @@ public static final float raw_cur_max     = 6000.0;
 public static final float raw_vol_min     = 0.0;
 public static final float raw_vol_max     = 7600.0;
 
+//define scaled output ranges for graphs
 public static final float prt_ldr_min     = 0.0;
 public static final float prt_ldr_max     = 100.0;
 public static final float prt_temp_min     = 0.0;
@@ -94,7 +109,7 @@ public static final float prt_vol_min      = 2.7;
 public static final float prt_vol_max      = 4.3;
 
 public void initializeData(){
-  IR0 = IR1 = IR3 = IR4 = IR5 = IR6 = IR7 = 0;
+  IR0 = IR1 = IR2 = IR3 = IR4 = IR5 = IR6 = IR7 = 0;
   MEMS0 = MEMS1 = MEMS2 = MEMS3 = 0;
   LDR = TEMP = CURR = RSSI = VOL0 = VOL1 = 0;
   ES0 = ES1 = ES2 = ES3 = false;
@@ -135,48 +150,54 @@ void logError(String toadd) {
  =========================================*/
 class eq1 implements ILine2DEquation{
   public double computePoint(double x,int pos) {
-    return (double)map(LDR, raw_ldr_min, raw_ldr_max, prt_ldr_min, prt_ldr_max);
+    if (demoMode) return 50+40*Math.sin(x);
+    else return (double)map((float)LDR, raw_ldr_min, raw_ldr_max, prt_ldr_min, prt_ldr_max);
   }    
 }
 class eq2 implements ILine2DEquation{
   public double computePoint(double x,int pos) {
-    return (double)map(TEMP, raw_temp_min, raw_temp_max, prt_temp_min, prt_temp_max);
+    if (demoMode) return 70+50*Math.sin(x);
+    else return (int)map((float)TEMP, raw_temp_min, raw_temp_max, prt_temp_min, prt_temp_max);
   }    
 }
 class eq3 implements ILine2DEquation{
   public double computePoint(double x,int pos) {
-    return (double)map(RSSI, raw_rssi_min, raw_rssi_max, prt_rssi_min, prt_rssi_max);
+    if (demoMode) return 50+50*Math.cos(x);
+    else return (int)map((float)RSSI, raw_rssi_min, raw_rssi_max, prt_rssi_min, prt_rssi_max);
   }    
 }
 class eq4 implements ILine2DEquation{
   public double computePoint(double x,int pos) {
-    return (double)map(VOL0, raw_vol_min, raw_vol_max, prt_vol_min, prt_vol_max);
+    if (demoMode) return 3.4+.6*Math.sin(x);
+    else return (int)map((float)VOL0, raw_vol_min, raw_vol_max, prt_vol_min, prt_vol_max);
   }    
 }
 class eq5 implements ILine2DEquation{
   public double computePoint(double x,int pos) {
-    return (double)map(VOL1, raw_vol_min, raw_vol_max, prt_vol_min, prt_vol_max);
+    if (demoMode) return 3.4+.6*Math.cos(x*2);
+    else return (int)map((float)VOL1, raw_vol_min, raw_vol_max, prt_vol_min, prt_vol_max);
   }    
 }
 class eq6 implements ILine2DEquation{
   public double computePoint(double x,int pos) {
-    return (double)map(CURR, raw_cur_min, raw_cur_max, prt_cur_min, prt_cur_max);
+    if (demoMode) return 100+90*Math.cos(x);
+    else return (int)map((float)CURR, raw_cur_min, raw_cur_max, prt_cur_min, prt_cur_max);
   }    
 }
 
 void setupGraphs() {
-  r1  = new RollingLine2DTrace(new eq1() ,100,0.1f);
-  r1.setTraceColour(255, 255, 255);
-  r2  = new RollingLine2DTrace(new eq2() ,100,0.1f);
-  r2.setTraceColour(255, 255, 255);
-  r3  = new RollingLine2DTrace(new eq3() ,100,0.1f);
-  r3.setTraceColour(255, 255, 255);
-  r4  = new RollingLine2DTrace(new eq4() ,100,0.1f);
-  r4.setTraceColour(255, 255, 255);
-  r5  = new RollingLine2DTrace(new eq5() ,100,0.1f);
+  r1  = new RollingLine2DTrace(new eq1(), 100, 0.1f);
+  r1.setTraceColour(0, 100, 255);
+  r2  = new RollingLine2DTrace(new eq2(), 100, 0.1f);
+  r2.setTraceColour(255, 100, 0);
+  r3  = new RollingLine2DTrace(new eq3(), 100, 0.1f);
+  r3.setTraceColour(10, 255, 20);
+  r4  = new RollingLine2DTrace(new eq4(), 100, 0.1f);
+  r4.setTraceColour(245, 151, 0);
+  r5  = new RollingLine2DTrace(new eq5(), 100, 0.1f);
   r5.setTraceColour(0, 245, 230);
-  r6  = new RollingLine2DTrace(new eq6() ,100,0.1f);
-  r6.setTraceColour(245, 151, 0);
+  r6  = new RollingLine2DTrace(new eq6(), 100, 0.1f);
+  r6.setTraceColour(255, 255, 10);;
 
   gb1 = new GridBackground(new GWColour(0));
   gb1.setGridColour(20,20,20,20,20,20);
@@ -210,7 +231,7 @@ void setupGraphs() {
   g2.setYAxisMax(prt_temp_max);
   g2.setYAxisMin(prt_temp_min);
   g2.addTrace(r2);
-  g2.position.y = 160;
+  g2.position.y = 170;
   g2.position.x = 870;
   g2.setYAxisTickSpacing(20);
   g2.setXAxisMax(5f);
@@ -222,6 +243,7 @@ void setupGraphs() {
   g2.setXAxisMinorTicks(5);
   g2.setXAxisLabel("");
   g2.setYAxisLabel("Degrees F");
+
   
   g3 = new Graph2D(this, 320, 80, false);
   g3.setYAxisMax(prt_rssi_max);
@@ -255,14 +277,14 @@ void setupGraphs() {
   g4.setXAxisTickSpacing(5.0);
   g4.setXAxisMinorTicks(5);
   g4.setXAxisLabel("");
-  g4.setYAxisLabel("Current");
+  g4.setYAxisLabel("Current mA");
   
   g5 = new Graph2D(this, 320, 80, false);
   g5.setYAxisMax(prt_vol_max);
   g5.setYAxisMin(prt_vol_min);
   g5.addTrace(r5);
   g5.addTrace(r4);
-  g5.position.y = 550;
+  g5.position.y = 560;
   g5.position.x = 870;
   g5.setYAxisTickSpacing(0.2);
   g5.setXAxisMax(5f);
@@ -273,7 +295,7 @@ void setupGraphs() {
   g5.setXAxisTickSpacing(5.0);
   g5.setXAxisMinorTicks(5);
   g5.setXAxisLabel("");
-  g5.setYAxisLabel("Voltage");
+  g5.setYAxisLabel("Voltage V");
 }
 
 /*=========================================
@@ -406,6 +428,53 @@ void controlEvent(ControlEvent theEvent) {
 }
 
 void parseSerialFrame() {
+  //time to dig into serialBuffer
+  IR0 = ((int)serialBuffer[0] << 4) + ((int)(serialBuffer[1]&0xF0) >> 4);
+  IR1 = ((int)(serialBuffer[1]&0x0F) << 8) + ((int)serialBuffer[2]);
+  
+  IR2 = ((int)serialBuffer[3] << 4) + ((int)(serialBuffer[4]&0xF0) >> 4);
+  IR3 = ((int)(serialBuffer[4]&0x0F) << 8) + ((int)serialBuffer[5]);
+  
+  IR4 = ((int)serialBuffer[6] << 4) + ((int)(serialBuffer[7]&0xF0) >> 4);
+  IR5 = ((int)(serialBuffer[7]&0x0F) << 8) + ((int)serialBuffer[8]);
+  
+  IR6 = ((int)serialBuffer[9] << 4) + ((int)(serialBuffer[10]&0xF0) >> 4);
+  IR7 = ((int)(serialBuffer[10]&0x0F) << 8) + ((int)serialBuffer[11]);
+  
+  MEMS0 = ((int)serialBuffer[12] << 4) + ((int)(serialBuffer[13]&0xF0) >> 4);
+  MEMS1 = ((int)(serialBuffer[13]&0x0F) << 8) + ((int)serialBuffer[14]);
+  
+  MEMS2 = ((int)serialBuffer[15] << 4) + ((int)(serialBuffer[16]&0xF0) >> 4);
+  MEMS3 = ((int)(serialBuffer[16]&0x0F) << 8) + ((int)serialBuffer[17]);
+  
+  LDR = ((int)serialBuffer[18] << 4) + ((int)(serialBuffer[19]&0xF0) >> 4);
+  
+  ES3 = ((int)(serialBuffer[19]&0x08) >> 3) == 1;
+  ES2 = ((int)(serialBuffer[19]&0x04) >> 2) == 1;
+  ES1 = ((int)(serialBuffer[19]&0x02) >> 1) == 1;
+  ES0 = ((int)(serialBuffer[19]&0x01)) == 1;
+  
+  IMU_X = ((int)serialBuffer[20] << 8) + (int)serialBuffer[21];
+  IMU_Y = ((int)serialBuffer[22] << 8) + (int)serialBuffer[23];
+  IMU_Z = ((int)serialBuffer[24] << 8) + (int)serialBuffer[25];
+  
+  TEMP = ((int)serialBuffer[26] << 8) + (int)serialBuffer[27];
+  
+  CURR = ((int)serialBuffer[28] << 4) + ((int)(serialBuffer[29]&0xF0) >> 4);
+  RSSI = ((int)(serialBuffer[29]&0x0F) << 8) + ((int)serialBuffer[30]);
+  
+  VOL0 = ((int)serialBuffer[31] << 4) + ((int)(serialBuffer[32]&0xF0) >> 4);
+  VOL1 = ((int)(serialBuffer[32]&0x0F) << 8) + ((int)serialBuffer[33]);
+  
+  ES3 = ((int)(serialBuffer[34]&0x80) >> 7) == 1;
+  ES2 = ((int)(serialBuffer[34]&0x40) >> 6) == 1;
+  ES1 = ((int)(serialBuffer[34]&0x20) >> 5) == 1;
+  ES0 = ((int)(serialBuffer[34]&0x10) >> 4) == 1;
+  
+  DP0 = ((int)(serialBuffer[34]&0x08) >> 3) == 1;
+  DP1 = ((int)(serialBuffer[34]&0x04) >> 2) == 1;
+  DP2 = ((int)(serialBuffer[34]&0x02) >> 1) == 1;
+  DP3 = ((int)(serialBuffer[34]&0x01)) == 1;
   
 }
 
@@ -536,19 +605,21 @@ void refreshUSB() {
 public void setup() {
   initializeData();
   
-  setupGraphs();
-  
   frame.setTitle("SWARM Robotics Debugger");
   PFont font = createFont("arial", 12);
-  size(1200, 900, P2D);
+  size(1200, 900);
   noStroke();
+  
   cp5 = new ControlP5(this);
   cp5.setAutoDraw(false);
   setupGraphics();
   logConsole("Graphics Initialized");
 
   logConsole("Initializing Serial Communications");
+  
   initializeSerial();
+  
+  setupGraphs();
 
   logConsole("Finished Initialization");
 }
@@ -558,6 +629,7 @@ public void setup() {
  =========================================*/
 public void draw() {
   background(0);
+  
   fill(20);
   rect(10, 860, 585, 30);
   fill(40);
@@ -576,17 +648,20 @@ public void draw() {
   text("Dropped: " + (droppedPackets / 1000.0) + " kP", 975, 835);
   if (packetNumber == 1) text("PDR: 100%", 975, 875);
   else text("PDR: " + (((packetNumber-droppedPackets-1)*1.0)/((packetNumber-1)*1.0)*100) + "%", 975, 875);
-
   if (inPacket) {
     text("Read State: Recv", 975, 855);
-  } 
-  else {
+  } else {
     text("Read State: Idle", 975, 855);
   }
-  
-
   text(currentSerialDevice + " @ " + (baudrate / 1000.0) + " KBaud", 975, 755);
 
+  text("LDR Brightness", 870, 36);
+  text("Temperature (F)", 870, 166);
+  text("RF Signal Strength", 870, 296);
+  text("Stepper Current", 870, 426);
+  text("Battery Voltage", 870, 556);
+
+  text("Time (s)", 1000, 675);
   cp5.draw();
   
   g1.draw();
